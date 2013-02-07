@@ -1,13 +1,13 @@
 #include	"chat.h"
 
-int				dListen, dConnection;
-
-void	*preServerThread(void);
+void	*preServerThread(void *);
 void	*serverThread(int); /* each thread executes this function */
+
+int				dListen, dConnection;
+pthread_t		tidPreServerThread;
 
 int main(int argc, char *argv[])
 {
-	pthread_t		tid;
 	struct sockaddr_in	uServer;
 
 	dListen = socket(AF_INET, SOCK_STREAM, 0);
@@ -20,11 +20,11 @@ int main(int argc, char *argv[])
 
 	for ( ; ; ) {
 		dConnection = accept(dListen, NULL, NULL);
-		pthread_create(&tid, NULL, preServerThread, NULL);
+		pthread_create(&tidPreServerThread, NULL, preServerThread, NULL);
 	}
 }
 
-void *preServerThread(void){
+void *preServerThread(void * ttt){
 	serverThread(dConnection);
 	return (NULL);
 }
