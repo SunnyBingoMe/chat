@@ -15,3 +15,8 @@
 *.exe
 *.out
 *.app
+*.a
+
+# tags
+tag*
+
