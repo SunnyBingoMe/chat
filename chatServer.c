@@ -3,8 +3,10 @@
 void	*preServerThread(void *);
 void	*serverThread(int); /* each thread executes this function */
 
-int				dListen, dConnection;
-pthread_t		tidPreServerThread;
+int 					dListen, dConnection;
+pthread_t				tidPreServerThread;
+struct serverThreadNode *pServerThreadNodeListHead = NULL, *pServerThreadNodeListEnd = NULL;
+int 					clientCount = 0, serverThreadNodeListLock = 0;
 
 int main(int argc, char *argv[])
 {

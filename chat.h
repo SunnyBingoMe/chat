@@ -43,12 +43,12 @@
 #define statusNick		2
 #define statusMsg		3
 
-struct clientNode{
+struct serverThreadNode{
 	int 	dConnection;
 	FILE	*pFileIn;
 	FILE	*pFileOut;
-	struct	clientNode *pPrevious;
-	struct	clientNode *pNext;
+	struct	serverThreadNode *pPrevious;
+	struct	serverThreadNode *pNext;
 };
 
 

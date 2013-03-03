@@ -19,61 +19,97 @@
 
 void *echoClientAll(void *);
 void *echoClientEach(void *);
+void *deleteServerThreadNode(struct serverThreadNode *);
 
-int					dConnection, clientCount = 0;
-char				line[MAX_MSG_SIZE + 1];
-struct clientNode	*pClientNodeListHead = NULL, *pClientNodeListEnd = NULL;
-pthread_t			tidEchoClientAll;
+extern struct serverThreadNode	*pServerThreadNodeListHead, *pServerThreadNodeListEnd;
+extern int clientCount, serverThreadNodeListLock;
+char						line[MAX_MSG_SIZE + 1];
+pthread_t					tidEchoClientAll;
 
-void *serverThread(int tdConnection)
+void *serverThread(int tdConnection) // after accept, one "serverThread" for each client
 {
 	pthread_detach(pthread_self());
-	struct clientNode *tpClientNode = NULL;
+	struct serverThreadNode		*pThisServerThreadNode = NULL;
+
 	clientCount ++;
+	printf("clientCount:%d.\n",clientCount);
 
-	tpClientNode = malloc(sizeof(struct clientNode));
-	bzero(tpClientNode, sizeof(struct clientNode));
+	pThisServerThreadNode = malloc(sizeof(struct serverThreadNode));
+	bzero(pThisServerThreadNode, sizeof(struct serverThreadNode));
 
-	if(clientCount == 1){
-		pClientNodeListHead = pClientNodeListEnd = tpClientNode;
-	}else{
-		tpClientNode -> pPrevious = pClientNodeListEnd;
-		pClientNodeListEnd -> pNext = tpClientNode;
-		pClientNodeListEnd = tpClientNode;
+	while(!serverThreadNodeListLock){
+		serverThreadNodeListLock = 1;
+
+		if(clientCount == 1){
+			pServerThreadNodeListHead = pServerThreadNodeListEnd = pThisServerThreadNode;
+		}else{
+			pThisServerThreadNode -> pPrevious = pServerThreadNodeListEnd;
+			pServerThreadNodeListEnd -> pNext = pThisServerThreadNode;
+			pServerThreadNodeListEnd = pThisServerThreadNode;
+		}
+
+		serverThreadNodeListLock = 0;
+		break;
+	}
+	pThisServerThreadNode -> dConnection = tdConnection;
+	pThisServerThreadNode -> pFileIn = fdopen(pThisServerThreadNode -> dConnection, "r");
+	pThisServerThreadNode -> pFileOut = fdopen(pThisServerThreadNode -> dConnection, "w");
+	setbuf(pThisServerThreadNode -> pFileIn, NULL);
+	setbuf(pThisServerThreadNode -> pFileOut, NULL);
+
+	while (fgets(line, MAX_MSG_SIZE + 1, pThisServerThreadNode -> pFileIn) != NULL){
+		pthread_create(&tidEchoClientAll, NULL, echoClientAll, pThisServerThreadNode);
 	}
 
-	pClientNodeListEnd -> dConnection = tdConnection;
-	pClientNodeListEnd -> pFileIn = fdopen(dConnection, "r");
-	pClientNodeListEnd -> pFileOut = fdopen(dConnection, "w");
-	setbuf(pClientNodeListEnd -> pFileIn, NULL);
-	setbuf(pClientNodeListEnd -> pFileOut, NULL);
-
-	while (fgets(line, MAX_MSG_SIZE + 1, pClientNodeListEnd -> pFileIn) != NULL){
-		pthread_create(&tidEchoClientAll, NULL, echoClientAll, NULL);
-	}
-
-	close(dConnection);
+	close(pThisServerThreadNode -> dConnection);
+	deleteServerThreadNode(pThisServerThreadNode);
 	return(NULL);
 }
 
-void *echoClientAll(void * ttt){
+void *echoClientAll(void *pThisServerThreadNode)
+{
 	pthread_detach(pthread_self());
-	pthread_t	tidEchoClientEach;
-	struct		clientNode *tpClientNodeToEcho = pClientNodeListHead;
+
+	pthread_t 				tidEchoClientEach;
+	struct serverThreadNode	*pThisServerThreadNodeToEcho = pServerThreadNodeListHead;
 
 	while(1){
-		pthread_create(&tidEchoClientEach, NULL, echoClientEach, tpClientNodeToEcho -> pFileOut);
-		if(tpClientNodeToEcho -> pNext != NULL){
-			tpClientNodeToEcho = tpClientNodeToEcho -> pNext;
+		if(pThisServerThreadNodeToEcho != pThisServerThreadNode){
+			pthread_create(&tidEchoClientEach, NULL, echoClientEach, pThisServerThreadNodeToEcho -> pFileOut);
+		}
+		if(pThisServerThreadNodeToEcho -> pNext != NULL){
+			pThisServerThreadNodeToEcho = pThisServerThreadNodeToEcho -> pNext;
 		}else{
 			return(NULL);
 		}
 	}
 }
 
-void *echoClientEach(void * pFileOut){
+void *echoClientEach(void * pFileOut)
+{
 	pthread_detach(pthread_self());
 	fputs(line, pFileOut);
+	return(NULL);
+}
+
+void *deleteServerThreadNode(struct serverThreadNode *pThisServerThreadNode)
+{
+	while(!serverThreadNodeListLock){
+		serverThreadNodeListLock = 1;
+
+		if(pThisServerThreadNode -> pPrevious != NULL){ // if not head
+			pThisServerThreadNode -> pPrevious -> pNext = pThisServerThreadNode -> pNext;
+		}
+		if(pThisServerThreadNode -> pNext != NULL){ // if not end
+			pThisServerThreadNode -> pNext -> pPrevious = pThisServerThreadNode -> pPrevious;
+		}
+
+		serverThreadNodeListLock = 0;
+		break;
+	}
+	clientCount --;
+	printf("clientCount:%d.\n",clientCount);
+	//free mem or move to mem pool
 	return(NULL);
 }
 

@@ -4,7 +4,7 @@
 
 void	*writeToServer(void *);
 
-static int	dConnection, chatStatus = 1, writeToServerIsDone;
+static int	dConnection, clientStatus = 1, writeToServerIsDone;
 static FILE	*dFile;
 
 void clientThread(FILE *tdFile, int tdConnection)
