@@ -13,6 +13,11 @@ int main(int argc, char *argv[])
 	struct sockaddr_in	uServer;
 
 	dListen = socket(AF_INET, SOCK_STREAM, 0);
+	int yes=1;
+	if (setsockopt(dListen, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1) {
+		perror("setsockopt()");
+		exit(1);
+	}
 	bzero(&uServer, sizeof(uServer));
 	uServer.sin_family = AF_INET;
 	uServer.sin_addr.s_addr = htons(INADDR_ANY);

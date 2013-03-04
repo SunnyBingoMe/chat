@@ -36,7 +36,7 @@
 #define chatPort 9997
 #define listenBacklogLength 100
 
-//static char chatSysVersion[] = "1.0";
+char chatSysVersion[] = "1.0";
 
 // chat status
 #define statusHello		1
@@ -45,10 +45,18 @@
 
 struct serverThreadNode{
 	int 	dConnection;
+	int 	serverStatus;
 	FILE	*pFileIn;
 	FILE	*pFileOut;
+	char	nick[MAX_NICK_SIZE + 1];
+	char	line[MAX_MSG_SIZE + 1];
 	struct	serverThreadNode *pPrevious;
 	struct	serverThreadNode *pNext;
+};
+
+struct serverThreadPair{
+	struct	serverThreadNode *pFrom;
+	struct	serverThreadNode *pTo;
 };
 
 
